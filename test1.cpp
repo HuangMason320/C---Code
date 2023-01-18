@@ -1,4 +1,6 @@
-#include <bits/stdc++.h>
+#include <cmath>
+#include <stdexcept>
+#include <string>
 using namespace std;
 
 class Constant : public Function
@@ -77,11 +79,6 @@ public:
             return new Arithmetic(Type::Sub, l, r);
         case '*':
             return new Arithmetic(Type::Mul, l, r);
-        case '/':
-            return new Arithmetic(Type::Div, l, r);
-        /*default:
-            // op not listed above, throw exception
-            throw invalid_argument(string("Unknown Arithmetic operator: ") + op);*/
         }
     }
     Function *differential() override
@@ -99,15 +96,6 @@ public:
                 Type::Add,
                 new Arithmetic(Type::Mul, l, dr),
                 new Arithmetic(Type::Mul, dl, r));
-        case Type::Div:
-            // (A / B)' = (A'B - B'A) / (B^2)
-            return new Arithmetic(
-                Type::Div,
-                new Arithmetic(
-                    Type::Sub,
-                    new Arithmetic(Type::Mul, r, dl),
-                    new Arithmetic(Type::Mul, l, dr)),
-                Polynomial::create(r, Constant::create(2)));
         }
     }
     double eval(double val) override
@@ -120,8 +108,6 @@ public:
             return l->eval(val) - r->eval(val);
         case Type::Mul:
             return l->eval(val) * r->eval(val);
-        case Type::Div:
-            return l->eval(val) / r->eval(val);
         }
     }
 
@@ -131,57 +117,10 @@ private:
         Add,
         Sub,
         Mul,
-        Div
     };
     Arithmetic(Type _type, Function *_l, Function *_r) : type(_type), l(_l), r(_r) {}
     Type type;
     Function *l, *r;
-};
-
-class Sin : public Function
-{
-public:
-    static Sin *create(Function *base)
-    {
-        return new Sin(base);
-    }
-    Function *differential() override;
-    double eval(double val) override
-    {
-        return sin(base->eval(val));
-    }
-
-private:
-    Sin(Function *_base) : base(_base) {}
-    Function *base;
-};
-
-class Cos : public Function
-{
-public:
-    static Cos *create(Function *base)
-    {
-        return new Cos(base);
-    }
-    Function *differential() override
-    {
-        // cos(A)' = -sin(A) * A'
-        return Arithmetic::create(
-            Constant::create(0),
-            '-',
-            Arithmetic::create(
-                Sin::create(base),
-                '*',
-                base->differential()));
-    }
-    double eval(double val) override
-    {
-        return cos(base->eval(val));
-    }
-
-private:
-    Cos(Function *_base) : base(_base) {}
-    Function *base;
 };
 
 Function *Polynomial::differential()
@@ -197,13 +136,4 @@ Function *Polynomial::differential()
                 ),
             '*',
             base->differential()));
-}
-
-Function *Sin::differential()
-{
-    // sin(A)' = cos(A) * A'
-    return Arithmetic::create(
-        Cos::create(base),
-        '*',
-        base->differential());
 }
